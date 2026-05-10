@@ -14,22 +14,27 @@ public class AIService : IDisposable
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {Config.API_KEY}");
     }
 
-    public async Task<string> AskAI(string question)
+    public async Task<string> AskAI(List<Message> history)
     {
         try
         {
             var request = new AIRequest
             {
                 Model = Config.MODEL,
-                Messages = new[]
-                {
-                    new Message { Role = "user", Content = question }
-                }
+                Messages = history.ToArray()
             };
 
             var json = JsonSerializer.Serialize(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             var response = await _client.PostAsync(Config.API_URL, content);
+
+            // Если OpenRouter вернет ошибку (например, кончились токены), это покажет причину
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorDetails = await response.Content.ReadAsStringAsync();
+                return $"Ошибка API: {response.StatusCode} - {errorDetails}";
+            }
+
 
             response.EnsureSuccessStatusCode();
 
@@ -44,7 +49,9 @@ public class AIService : IDisposable
 
     private string ExtractAnswer(string responseJson)
     {
-        var aiResponse = JsonSerializer.Deserialize<AIResponse>(responseJson);
+        // Используем опцию IgnoreCase, так как API иногда меняет регистр полей
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var aiResponse = JsonSerializer.Deserialize<AIResponse>(responseJson, options);
         return aiResponse?.Choices?[0]?.Message?.Content ?? "Нет ответа";
     }
 
