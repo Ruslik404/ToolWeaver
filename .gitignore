@@ -1,3 +1,6 @@
-
+.env
 bin/
 obj/
+
+Workspace/
+ProjectContext.md

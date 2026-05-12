@@ -19,7 +19,10 @@ class Program
         //все навыки
         var tools = new List<ITool> {
             new GetTimeTool(),
-            new CreateFileTool() 
+            new CreateFileTool(),
+            new WriteFileTool(),
+            new ListFilesTool(),
+            new ReadFileTool()
         };
 
         Console.WriteLine("ToolWeaver started");
