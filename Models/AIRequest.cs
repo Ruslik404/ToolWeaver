@@ -9,6 +9,16 @@ public class AIRequest
 
     [JsonPropertyName("messages")]
     public Message[]? Messages { get; set; }
+
+
+    [JsonPropertyName("temperature")]
+    public float Temperature { get; set; } = 0.0f; // Выключает бред и креатив
+
+    [JsonPropertyName("top_p")]
+    public float TopP { get; set; } = 0.1f; // Заставляет выбирать только точные слова
+
+    [JsonPropertyName("max_tokens")]
+    public int MaxTokens { get; set; } = 1500; // Ограничение на длину ответа
 }
 
 public class Message

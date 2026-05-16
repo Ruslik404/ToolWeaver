@@ -10,30 +10,24 @@ public class ReadFileTool : ITool
     {
         try
         {
-            // Десериализация (добавил проверку на ошибки JSON)
-            var data = JsonSerializer.Deserialize<WriteFileData>(args);
+            if (string.IsNullOrWhiteSpace(args))
+                return "Ошибка: Путь к файлу не указан.";
 
-            if (data == null || string.IsNullOrWhiteSpace(data.FileName))
-                return "Ошибка: Имя файла не указано в JSON.";
-
-            
-            //Путь файла)
-            string folder = Path.Combine(Directory.GetCurrentDirectory(), "Workspace");
-            string path = Path.Combine(folder, data.FileName);
+            string path = Path.GetFullPath(args.Trim());
 
             Console.WriteLine(path);
             if (!File.Exists(path))
             {
-                return $"Ошибка: Файл '{data.FileName}' не найден в папке Workspace.";
+                return $"Ошибка: Файл '{path}' не найден в папке Workspace.";
             }
 
             //Читаем 
             string content = await File.ReadAllTextAsync(path);
 
             if (string.IsNullOrWhiteSpace(content))
-                return $"Инфо: Файл '{data.FileName}' найден, но он пуст.";
+                return $"Инфо: Файл '{path}' найден, но он пуст.";
 
-            return $"Успех. Содержимое файла {data.FileName}:\n{content}";
+            return $"Успех. Содержимое файла {path}:\n{content}";
         }
         catch (Exception ex)
         {

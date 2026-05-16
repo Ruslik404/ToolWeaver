@@ -9,7 +9,9 @@ public class ListFilesTool : ITool
     {
         try
         {
-            string folder = Path.Combine(Directory.GetCurrentDirectory(), "Workspace");
+                string folder = string.IsNullOrWhiteSpace(args)
+                    ? Path.Combine(Directory.GetCurrentDirectory(), "Workspace")
+                    : Path.GetFullPath(args);
             
             Directory.CreateDirectory(folder);
             Console.WriteLine(folder);

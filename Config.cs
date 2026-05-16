@@ -5,7 +5,7 @@ public static class Config
     // Вместо прямой строки читаем из переменной окружения или файла
     public static string API_KEY => GetApiKey(); 
     
-      public const string MODEL = "openrouter/free";
+    public const string MODEL = "z-ai/glm-4.5-air:free"; //openrouter/free
     public const string API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
   

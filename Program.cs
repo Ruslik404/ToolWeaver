@@ -1,4 +1,4 @@
-﻿
+﻿using System.Text.RegularExpressions; 
 using ToolWeaver.Services;
 using ToolWeaver.Models; 
 using ToolWeaver.Tools;
@@ -69,7 +69,17 @@ class Program
 
                 // Проверка на права:
                 if (tool.RequiresConfirmation && !ConfirmExecution(tool.Name, args))
-                    continue;
+                {
+                    string denialResult = "Ошибка: Пользователь отклонил запрос на выполнение этой команды.";
+
+                    history.Add(new Message { Role = "assistant", Content = $"{tool.Name}: {args}" });
+                    history.Add(new Message { Role = "user", Content = $"System result: {denialResult}" });
+
+                    currentAnswer = await aiService.AskAI(history);
+
+                    toolExecuted = true; 
+                    break; 
+                }
 
                 // ВЫПОЛНЕНИЕ
                 string result = await tool.ExecuteAsync(args);
@@ -91,20 +101,19 @@ class Program
     // Вспомогательная функция для выреза
     static string ExtractArgs(string text, string toolName)
     {
-        // Ищем, где начинается название инструмента
-        int nameIndex = text.IndexOf(toolName, StringComparison.OrdinalIgnoreCase);
-        if (nameIndex == -1) return string.Empty;
 
-        // Ищем двоеточие ТОЛЬКО после названия инструмента
-        int start = text.IndexOf(":", nameIndex);
-        // Ищем закрывающую скобку ТОЛЬКО после этого двоеточия
-        int end = text.IndexOf("]", nameIndex);
+        //Создание текстового шаблона
+        string pattern = $@"\[{Regex.Escape(toolName)}\s*:\s*(.*?)\]";
 
-        if (start != -1 && end > start)
+        // Запускаем поиск по этому трафарету во всем тексте от ИИ
+        var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+        if (match.Success)
         {
-            // Вырезаем только то, что внутри скобок ЭТОГО инструмента
-            return text.Substring(start + 1, end - start - 1).Trim();
+            // Возвращаем чистый JSON, который лежал внутри скобок
+            return match.Groups[1].Value.Trim();
         }
+
 
         return string.Empty;
     }
