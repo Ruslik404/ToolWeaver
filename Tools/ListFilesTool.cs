@@ -1,3 +1,7 @@
+using System.Text.Json; 
+using System.IO;
+using System.Linq;
+
 namespace ToolWeaver.Tools;
 
 public class ListFilesTool : ITool
@@ -9,18 +13,22 @@ public class ListFilesTool : ITool
     {
         try
         {
-                string folder = string.IsNullOrWhiteSpace(args)
-                    ? Path.Combine(Directory.GetCurrentDirectory(), "Workspace")
-                    : Path.GetFullPath(args);
-            
-            Directory.CreateDirectory(folder);
-            Console.WriteLine(folder);
+            //Парсим JSON вместо raw-строки
+            using var doc = JsonDocument.Parse(args);
+            string folder = doc.RootElement.GetProperty("path").GetString()?.Trim() ?? string.Empty;
+
+
+            if (string.IsNullOrWhiteSpace(folder))
+                folder = Path.Combine(Directory.GetCurrentDirectory(), "Workspace");
+            else
+                folder = Path.GetFullPath(folder);
+
 
             var files = Directory.EnumerateFileSystemEntries(folder);
             string result = string.Join(", ", files.Select(Path.GetFileName));
 
             if (string.IsNullOrEmpty(result))
-                return "Папка Workspace пуста.";
+                return $"Папка '{Path.GetFileName(folder)}' пуста.";
 
             return $"Успех. Файлы: {result}";
         }

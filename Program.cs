@@ -2,7 +2,7 @@
 using ToolWeaver.Services;
 using ToolWeaver.Models; 
 using ToolWeaver.Tools;
-
+using System.Text.Json;  // ← для JsonDocument
 class Program
 {
     static async Task Main(string[] args)
@@ -22,7 +22,8 @@ class Program
             new CreateFileTool(),
             new WriteFileTool(),
             new ListFilesTool(),
-            new ReadFileTool()
+            new ReadFileTool(),
+            new OpenAppTool()
         };
 
         Console.WriteLine("ToolWeaver started");
@@ -59,63 +60,77 @@ class Program
         {
             toolExecuted = false; //ниче не сделали
 
-            foreach (var tool in tools)
+            // 1. Парсим ответ один раз
+            var parsed = TryParseToolCall(currentAnswer);
+            if (!parsed.Success) break; // Нет валидного JSON → выходим из цикла
+            
+            // 2. Ищем инструмент по имени из JSON
+            var tool = tools.FirstOrDefault(t => t.Name.Equals(parsed.ToolName, StringComparison.OrdinalIgnoreCase));
+            if (tool == null) break; // Инструмент не зарегистрирован → выходим
+            
+            string args = parsed.ArgsJson ?? string.Empty;
+
+            // Проверка на права:
+            if (tool.RequiresConfirmation && !ConfirmExecution(tool.Name, args))
             {
-                if (!currentAnswer.Contains(tool.Name, StringComparison.OrdinalIgnoreCase)) 
-                    continue;
-
-                // Вырезаем содержимое в ответе:
-                string args = ExtractArgs(currentAnswer, tool.Name);
-
-                // Проверка на права:
-                if (tool.RequiresConfirmation && !ConfirmExecution(tool.Name, args))
-                {
-                    string denialResult = "Ошибка: Пользователь отклонил запрос на выполнение этой команды.";
-
-                    history.Add(new Message { Role = "assistant", Content = $"{tool.Name}: {args}" });
-                    history.Add(new Message { Role = "user", Content = $"System result: {denialResult}" });
-
-                    currentAnswer = await aiService.AskAI(history);
-
-                    toolExecuted = true; 
-                    break; 
-                }
-
-                // ВЫПОЛНЕНИЕ
-                string result = await tool.ExecuteAsync(args);
-
-                // ОБНОВЛЯЕМ КОНТЕКСТ
+                string denialResult = "Ошибка: Пользователь отклонил запрос на выполнение этой команды.";
                 history.Add(new Message { Role = "assistant", Content = $"{tool.Name}: {args}" });
-                history.Add(new Message { Role = "user", Content = $"System result: {result}" });
-
+                history.Add(new Message { Role = "user", Content = $"System result: {denialResult}" });
                 currentAnswer = await aiService.AskAI(history);
-
-                toolExecuted = true; // Помечаем, что мы что-то выполнили
-                break; 
+                toolExecuted = true; 
+                continue; 
             }
+            // ВЫПОЛНЕНИЕ
+            string result = await tool.ExecuteAsync(args);
+            // ОБНОВЛЯЕМ КОНТЕКСТ
+            history.Add(new Message { Role = "assistant", Content = $"{tool.Name}: {args}" });
+            history.Add(new Message { Role = "user", Content = $"System result: {result}" });
+            currentAnswer = await aiService.AskAI(history);
+            toolExecuted = true; // Помечаем, что мы что-то выполнили
+            continue; 
+            
         } while(toolExecuted);
 
         return currentAnswer;
     }
 
     // Вспомогательная функция для выреза
-    static string ExtractArgs(string text, string toolName)
+
+    public class ParsedToolCall
     {
-
-        //Создание текстового шаблона
-        string pattern = $@"\[{Regex.Escape(toolName)}\s*:\s*(.*?)\]";
-
-        // Запускаем поиск по этому трафарету во всем тексте от ИИ
-        var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-        if (match.Success)
+        public string? ToolName { get; set; }
+        public string? ArgsJson { get; set; }
+        public bool Success { get; set; }
+    }
+    static ParsedToolCall TryParseToolCall(string text)
+    {
+        try
         {
-            // Возвращаем чистый JSON, который лежал внутри скобок
-            return match.Groups[1].Value.Trim();
+            // Ищем первый { и последний } — вырезаем потенциальный JSON
+            int start = text.IndexOf('{');
+            int end = text.LastIndexOf('}');
+
+            if (start == -1 || end == -1 || end <= start)
+                return new ParsedToolCall { Success = false };
+
+            string json = text.Substring(start, end - start + 1);
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("tool", out var toolProp) && 
+                root.TryGetProperty("args", out var argsProp))
+            {
+                return new ParsedToolCall 
+                { 
+                    ToolName = toolProp.GetString(), 
+                    ArgsJson = argsProp.GetRawText(), 
+                    Success = true 
+                };
+            }
         }
+        catch { /* невалидный JSON — игнорируем */ }
 
-
-        return string.Empty;
+        return new ParsedToolCall { Success = false };
     }
 
 

@@ -3,6 +3,12 @@ namespace ToolWeaver.Tools;
 
 public class WriteFileTool : ITool
 {
+    // ← НОВОЕ: Опции для игнорирования регистра имён свойств
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public string Name => "WRITE_FILE";
     public bool RequiresConfirmation => true; 
 
@@ -10,8 +16,8 @@ public class WriteFileTool : ITool
     {
         try
         {
-            // Пытаемся превратить JSON-строку в объект
-            var data = JsonSerializer.Deserialize<WriteFileData>(args);
+            // ← ИЗМЕНЕНО: Передаём опции в десериализатор
+            var data = JsonSerializer.Deserialize<WriteFileData>(args, _jsonOptions);
 
             if (data == null || string.IsNullOrWhiteSpace(data.FileName))
                 return "Ошибка: Неверный формат JSON или пустое имя файла.";
@@ -21,7 +27,11 @@ public class WriteFileTool : ITool
             string path = Path.Combine(folder, data.FileName);
 
             await File.WriteAllTextAsync(path, data.Content);
-            return $"Успех: Текст записан в файл {data.FileName}.";
+            return $"Успех: Текст записан в файл '{data.FileName}'.";
+        }
+        catch (JsonException) // ← НОВОЕ: ловим ошибки формата отдельно
+        {
+            return $"Ошибка формата: ожидался JSON с полями 'filename' и 'content'.";
         }
         catch (Exception ex)
         {
@@ -30,7 +40,6 @@ public class WriteFileTool : ITool
     }
 }
 
-// Маленький вспомогательный класс для десериализации
 public class WriteFileData
 {
     public string FileName { get; set; } = string.Empty;

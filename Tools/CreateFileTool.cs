@@ -1,5 +1,5 @@
 namespace ToolWeaver.Tools;
-
+using System.Text.Json;
 public class CreateFileTool : ITool
 {
     public string Name => "CREATE_FILE";
@@ -11,9 +11,9 @@ public class CreateFileTool : ITool
         {
             string folder = "Workspace";
             Directory.CreateDirectory(folder); 
-
-            string fileName = args.Trim();
-            
+            using var doc = JsonDocument.Parse(args);
+            // Замени строку с fileName на:
+            string fileName = doc.RootElement.GetProperty("filename").GetString()?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(fileName)) return "Ошибка: имя файла не указано.";
 
             string path = Path.Combine(folder, fileName); //полный путь
