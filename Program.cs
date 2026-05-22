@@ -23,11 +23,17 @@ class Program
             new WriteFileTool(),
             new ListFilesTool(),
             new ReadFileTool(),
-            new OpenAppTool()
+            new OpenAppTool(),
+            new DesktopNotifyTool()
         };
 
         Console.WriteLine("ToolWeaver started");
 
+        var notifyTool = tools.FirstOrDefault(t => t.Name == "DESKTOP_NOTIFY");
+        var cts = new CancellationTokenSource();
+
+        // Запускаем "фоновый мозг" (не блокирует консоль)
+        _ = RunProactiveAgent(aiService, notifyTool, cts.Token);
 
         while(true) 
         {   
@@ -141,5 +147,48 @@ class Program
         Console.Write("[SYSTEM] Разрешить? (y/n): ");
         return Console.ReadLine()?.ToLower() == "y";
     }
-}
 
+
+    
+    static async Task RunProactiveAgent(AIService aiService, ITool? notifyTool, CancellationToken ct)
+    {
+        int intervalMinutes = 3; // тест
+    
+        //Console.WriteLine("[Proactive] Фоновая задача запущена.");
+    
+        while (!ct.IsCancellationRequested)
+        {
+            await Task.Delay(TimeSpan.FromMinutes(intervalMinutes), ct);
+            //Console.WriteLine($"[Proactive] Тик таймера. Пытаюсь спросить ИИ...");
+    
+            try
+            {
+                if (notifyTool == null) 
+                {
+                    //Console.WriteLine("[Proactive] ОШИБКА: notifyTool не найден!");
+                    continue;
+                }
+    
+                // ← ИСПРАВЛЕНО: добавлен "user" для совместимости с Z.AI
+                var prompt = new List<Message>
+                {
+                    new Message { Role = "system", Content = "Ты — дружелюбный помощник. Спроси одним коротким предложением, нужна ли помощь. Звучи естественно." },
+                    new Message { Role = "user", Content = "..." }
+                };
+    
+                string reply = await aiService.AskAI(prompt);
+                Console.WriteLine($"[Proactive] ИИ ответил: {reply}");
+    
+                string safeMsg = reply.Replace("\"", "'");
+                await notifyTool.ExecuteAsync($"{{\"title\": \"ToolWeaver\", \"message\": \"{safeMsg}\"}}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Proactive] ОШИБКА: {ex.Message}");
+            }
+        }
+    }
+
+
+
+}
