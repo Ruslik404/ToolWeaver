@@ -2,6 +2,7 @@ namespace ToolWeaver.Tools;
 public interface ITool
 {
     string Name { get; }
+    string Description { get; } 
     bool RequiresConfirmation { get; } 
 
     // Метод Execute должен возвращать строку (результат работы), 

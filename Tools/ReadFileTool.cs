@@ -6,7 +6,8 @@ namespace ToolWeaver.Tools;
 public class ReadFileTool : ITool
 {
     public string Name => "READ_FILE";
-    public bool RequiresConfirmation => false; 
+    public string Description => "Прочитать содержимое файла. Формат: {\"tool\": \"READ_FILE\", \"args\": {\"path\": \"config.json\"}}";
+    public bool RequiresConfirmation => false;
 
     public async Task<string> ExecuteAsync(string args)
     {

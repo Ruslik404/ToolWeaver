@@ -2,7 +2,9 @@
 using ToolWeaver.Services;
 using ToolWeaver.Models; 
 using ToolWeaver.Tools;
-using System.Text.Json;  // ← для JsonDocument
+using System.Text.Json;
+using System.Reflection;
+
 class Program
 {
     static async Task Main(string[] args)
@@ -16,18 +18,14 @@ class Program
         string prompt = PromptService.GetSystemPrompt();
         chatHistory.Add(new Message { Role = "system", Content = prompt });
 
-        //все навыки
-        var tools = new List<ITool> {
-            new GetTimeTool(),
-            new CreateFileTool(),
-            new WriteFileTool(),
-            new ListFilesTool(),
-            new ReadFileTool(),
-            new OpenAppTool(),
-            new DesktopNotifyTool()
-        };
+        // Автоматическая загрузка всех инструментов, реализующих ITool
+        var tools = Assembly.GetExecutingAssembly()
+            .GetTypes()
+            .Where(t => typeof(ITool).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
+            .Select(t => (ITool)Activator.CreateInstance(t)!)
+            .ToList();
 
-        Console.WriteLine("ToolWeaver started");
+        Console.WriteLine($"ToolWeaver started with {tools.Count} tools.");
 
         var notifyTool = tools.FirstOrDefault(t => t.Name == "DESKTOP_NOTIFY");
         var cts = new CancellationTokenSource();

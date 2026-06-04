@@ -7,7 +7,8 @@ namespace ToolWeaver.Tools;
 public class ListFilesTool : ITool
 {
     public string Name => "LIST_FILES";
-    public bool RequiresConfirmation => false; 
+    public string Description => "Узнать список файлов в папке. Если путь не передан, используется './Workspace'. Формат: {\"tool\": \"LIST_FILES\", \"args\": {\"path\": \"./docs\"}}";
+    public bool RequiresConfirmation => false;
 
     public async Task<string> ExecuteAsync(string args)
     {

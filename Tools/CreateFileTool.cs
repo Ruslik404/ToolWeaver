@@ -3,7 +3,8 @@ using System.Text.Json;
 public class CreateFileTool : ITool
 {
     public string Name => "CREATE_FILE";
-    public bool RequiresConfirmation => true; 
+    public string Description => "Создать пустой файл. Формат: {\"tool\": \"CREATE_FILE\", \"args\": {\"filename\": \"имя_файла.txt\"}}";
+    public bool RequiresConfirmation => true;
 
     public async Task<string> ExecuteAsync(string args)
     {

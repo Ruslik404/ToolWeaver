@@ -10,6 +10,7 @@ public class WriteFileTool : ITool
     };
 
     public string Name => "WRITE_FILE";
+    public string Description => "Записать текст в файл. ВАЖНО: args должен содержать 'filename' и 'content'. Формат: {\"tool\": \"WRITE_FILE\", \"args\": {\"filename\": \"имя.txt\", \"content\": \"текст\"}}";
     public bool RequiresConfirmation => true; 
 
     public async Task<string> ExecuteAsync(string args)
@@ -24,10 +25,13 @@ public class WriteFileTool : ITool
 
             string folder = "Workspace";
             Directory.CreateDirectory(folder);
-            string path = Path.Combine(folder, data.FileName);
+            
+            // Безопасная сборка пути: предотвращаем выход за пределы папки Workspace
+            string fileName = Path.GetFileName(data.FileName); 
+            string path = Path.Combine(folder, fileName);
 
             await File.WriteAllTextAsync(path, data.Content);
-            return $"Успех: Текст записан в файл '{data.FileName}'.";
+            return $"Успех: Текст записан в файл '{fileName}' в папке Workspace.";
         }
         catch (JsonException) // ← НОВОЕ: ловим ошибки формата отдельно
         {
