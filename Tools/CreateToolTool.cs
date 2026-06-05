@@ -10,7 +10,8 @@ public class CreateToolTool : ITool
     };
 
     public string Name => "CREATE_NEW_TOOL";
-    public string Description => "Создать новый инструмент (C# класс). Нужно передать 'className' и полный 'code' класса, реализующего ITool. Формат: {\"tool\": \"CREATE_NEW_TOOL\", \"args\": {\"className\": \"MyTool\", \"code\": \"...\"}}";
+    public string Description => "Создать новый инструмент (C# класс).";
+    public object Parameters => new { className = "string", code = "string" };
     public bool RequiresConfirmation => true;
 
     public async Task<string> ExecuteAsync(string args)

@@ -3,28 +3,47 @@ using System.Text.Json;
 public class CreateFileTool : ITool
 {
     public string Name => "CREATE_FILE";
-    public string Description => "Создать пустой файл. Формат: {\"tool\": \"CREATE_FILE\", \"args\": {\"filename\": \"имя_файла.txt\"}}";
+    public string Description => "Создать пустой файл. Автоматически создает папки, если они указаны в пути (например, 'folder/file.txt').";
+    public object Parameters => new { filename = "string" };
     public bool RequiresConfirmation => true;
 
     public async Task<string> ExecuteAsync(string args)
     {
         try
         {
+            var data = JsonSerializer.Deserialize<CreateFileData>(args, _jsonOptions);
+            if (data == null || string.IsNullOrWhiteSpace(data.FileName))
+                return "Ошибка: Неверный формат JSON или пустое имя файла.";
+
             string folder = "Workspace";
-            Directory.CreateDirectory(folder); 
-            using var doc = JsonDocument.Parse(args);
-            // Замени строку с fileName на:
-            string fileName = doc.RootElement.GetProperty("filename").GetString()?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(fileName)) return "Ошибка: имя файла не указано.";
+            string path = Path.Combine(folder, data.FileName);
 
-            string path = Path.Combine(folder, fileName); //полный путь
+            // Автоматически создаем все папки по указанному пути
+            string? directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
 
-            await File.WriteAllTextAsync(path, string.Empty); // Создаем пустой файл
-            return $"Успех: Пустой файл '{fileName}' создан.";
+            if (File.Exists(path))
+                return $"Ошибка: Файл '{data.FileName}' уже существует.";
+
+            await File.WriteAllTextAsync(path, "");
+            return $"Успех: Файл '{data.FileName}' создан (включая необходимые директории).";
         }
         catch (Exception ex)
         {
             return $"Ошибка: {ex.Message}";
         }
     }
+
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+}
+
+public class CreateFileData
+{
+    public string FileName { get; set; } = string.Empty;
 }

@@ -11,13 +11,6 @@ class Program
     {
         using var aiService = new AIService();
 
-
-        var chatHistory = new List<Message>(); // creat History chat for ai
-
-        //PROMPT
-        string prompt = PromptService.GetSystemPrompt();
-        chatHistory.Add(new Message { Role = "system", Content = prompt });
-
         // Автоматическая загрузка всех инструментов, реализующих ITool
         var tools = Assembly.GetExecutingAssembly()
             .GetTypes()
@@ -26,6 +19,21 @@ class Program
             .ToList();
 
         Console.WriteLine($"ToolWeaver started with {tools.Count} tools.");
+
+        // Генерируем JSON-описание инструментов для промпта
+        var toolsForAi = tools.Select(t => new {
+            name = t.Name,
+            description = t.Description,
+            parameters = t.Parameters
+        });
+        string toolsJson = JsonSerializer.Serialize(toolsForAi, new JsonSerializerOptions { WriteIndented = true });
+
+        // Формируем финальный промпт
+        string basePrompt = PromptService.GetSystemPrompt();
+        string fullPrompt = basePrompt.Replace("(Список инструментов генерируется автоматически)", toolsJson);
+
+        var chatHistory = new List<Message>(); 
+        chatHistory.Add(new Message { Role = "system", Content = fullPrompt });
 
         var notifyTool = tools.FirstOrDefault(t => t.Name == "DESKTOP_NOTIFY");
         var cts = new CancellationTokenSource();

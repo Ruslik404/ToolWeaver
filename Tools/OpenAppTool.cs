@@ -7,7 +7,8 @@ namespace ToolWeaver.Tools;
 public class OpenAppTool : ITool
 {
     public string Name => "OPEN_APP";
-    public string Description => "Открыть приложение или выполнить системную команду. Формат: {\"tool\": \"OPEN_APP\", \"args\": {\"command\": \"имя_программы\"}}";
+    public string Description => "Открыть приложение или выполнить системную команду.";
+    public object Parameters => new { command = "string" };
     public bool RequiresConfirmation => true;
 
     public async Task<string> ExecuteAsync(string args)

@@ -7,7 +7,8 @@ namespace ToolWeaver.Tools;
 public class DesktopNotifyTool : ITool
 {
     public string Name => "DESKTOP_NOTIFY";
-    public string Description => "Отправить системное уведомление. Формат: {\"tool\": \"DESKTOP_NOTIFY\", \"args\": {\"title\": \"Заголовок\", \"message\": \"Текст\"}}";
+    public string Description => "Отправить системное уведомление.";
+    public object Parameters => new { title = "string", message = "string" };
     public bool RequiresConfirmation => false;
 
     public async Task<string> ExecuteAsync(string args)

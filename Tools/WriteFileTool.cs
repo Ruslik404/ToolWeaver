@@ -10,7 +10,8 @@ public class WriteFileTool : ITool
     };
 
     public string Name => "WRITE_FILE";
-    public string Description => "Записать текст в файл. ВАЖНО: args должен содержать 'filename' и 'content'. Формат: {\"tool\": \"WRITE_FILE\", \"args\": {\"filename\": \"имя.txt\", \"content\": \"текст\"}}";
+    public string Description => "Записывает текст в файл.";
+    public object Parameters => new { filename = "string", content = "string" };
     public bool RequiresConfirmation => true; 
 
     public async Task<string> ExecuteAsync(string args)
@@ -24,14 +25,20 @@ public class WriteFileTool : ITool
                 return "Ошибка: Неверный формат JSON или пустое имя файла.";
 
             string folder = "Workspace";
-            Directory.CreateDirectory(folder);
+            string path = Path.Combine(folder, data.FileName);
             
-            // Безопасная сборка пути: предотвращаем выход за пределы папки Workspace
-            string fileName = Path.GetFileName(data.FileName); 
-            string path = Path.Combine(folder, fileName);
+            if (!File.Exists(path))
+            {
+                // Проверяем, существует ли хотя бы директория
+                string? directory = Path.GetDirectoryName(path);
+                if (directory != null && !Directory.Exists(directory))
+                {
+                    return $"Ошибка: Директория '{directory}' не существует. Сначала создайте её через CREATE_FILE.";
+                }
+            }
 
             await File.WriteAllTextAsync(path, data.Content);
-            return $"Успех: Текст записан в файл '{fileName}' в папке Workspace.";
+            return $"Успех: Файл '{data.FileName}' записан.";
         }
         catch (JsonException) // ← НОВОЕ: ловим ошибки формата отдельно
         {
