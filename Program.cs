@@ -74,7 +74,20 @@ class Program
 
             // 1. Парсим ответ один раз
             var parsed = TryParseToolCall(currentAnswer);
-            if (!parsed.Success) break; // Нет валидного JSON → выходим из цикла
+            if (!parsed.Success) 
+            {
+                // Если парсер не сработал, но ИИ явно пытался написать команду (есть символ '{')
+                if (currentAnswer.Contains('{'))
+                {
+                    history.Add(new Message { Role = "assistant", Content = currentAnswer });
+                    history.Add(new Message { Role = "user", Content = "System result: [Ошибка] Неверный формат. Пиши строго JSON." });
+                    currentAnswer = await aiService.AskAI(history);
+                    toolExecuted = true; // запускаем цикл заново, давая ИИ шанс исправиться
+                    continue;
+                }
+
+                break; // Если это был реально просто текст — выходим к пользователю
+            }
             
             // 2. Ищем инструмент по имени из JSON
             var tool = tools.FirstOrDefault(t => t.Name.Equals(parsed.ToolName, StringComparison.OrdinalIgnoreCase));
@@ -139,6 +152,18 @@ class Program
                     Success = true 
                 };
             }
+
+            // Если внутри JSON нет поля "tool", берем текст ПЕРЕД скобкой (например, "READ_FILE:")
+            string prefix = text.Substring(0, start).Replace(":", "").Trim();
+            if (!string.IsNullOrEmpty(prefix))
+            {
+                return new ParsedToolCall 
+                { 
+                    ToolName = prefix, // Записываем READ_FILE сюда
+                    ArgsJson = json,   // А весь JSON {"path": "стих.txt"} отдаем как аргументы
+                    Success = true 
+                };
+            }
         }
         catch { /* невалидный JSON — игнорируем */ }
 
@@ -158,7 +183,7 @@ class Program
     
     static async Task RunProactiveAgent(AIService aiService, ITool? notifyTool, CancellationToken ct)
     {
-        int intervalMinutes = 3; // тест
+        int intervalMinutes = 5; // тест
     
         //Console.WriteLine("[Proactive] Фоновая задача запущена.");
     

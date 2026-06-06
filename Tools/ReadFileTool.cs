@@ -14,36 +14,30 @@ public class ReadFileTool : ITool
     {
         try
         {
-            // ← НОВОЕ: Парсим JSON вместо raw-строки
             using var doc = JsonDocument.Parse(args);
-            string path = doc.RootElement.GetProperty("path").GetString()?.Trim() ?? string.Empty;
+            string fileName = doc.RootElement.GetProperty("path").GetString()?.Trim() ?? string.Empty;
 
-            // ← Твоя проверка на пустоту (без изменений)
-            if (string.IsNullOrWhiteSpace(path))
+            if (string.IsNullOrWhiteSpace(fileName))
                 return "Ошибка: Путь к файлу не указан.";
 
-            path = Path.GetFullPath(path); // ← Было: args.Trim()
+            // Работаем строго внутри папки Workspace
+            string path = Path.Combine("Workspace", fileName);
 
-            Console.WriteLine(path);
             if (!File.Exists(path))
             {
-                return $"Ошибка: Файл '{path}' не найден.";
+                return $"Ошибка: Файл '{fileName}' не найден в папке Workspace.";
             }
 
             string content = await File.ReadAllTextAsync(path);
-
-            if (string.IsNullOrWhiteSpace(content))
-                return $"Инфо: Файл '{path}' найден, но он пуст.";
-
-            return $"Успех. Содержимое файла {path}:\n{content}";
+            return content;
         }
-        catch (JsonException) // ← НОВОЕ: отлавливаем ошибки парсинга отдельно
+        catch (JsonException)
         {
-            return $"Ошибка формата аргументов: ожидался JSON с полем 'path'.";
+            return "Ошибка формата: ожидался JSON с полем 'path'.";
         }
         catch (Exception ex)
         {
-            return $"Ошибка при чтении: {ex.Message}";
+            return $"Ошибка: {ex.Message}";
         }
     }
 }
